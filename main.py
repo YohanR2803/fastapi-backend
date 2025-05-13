@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, Depends, Request, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -18,6 +19,7 @@ if not SECRET_TOKEN:
 Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
+# Define Pydantic model for submission data
 class SubmissionIn(BaseModel):
     email: str
     discord_id: str
@@ -26,6 +28,7 @@ class SubmissionIn(BaseModel):
     mobile_no: str
     country: str
 
+# Dependency to get a session from the database
 def get_db():
     db = SessionLocal()
     try:
@@ -39,22 +42,26 @@ def verify_auth(request: Request):
     if auth_header != SECRET_TOKEN:
         raise HTTPException(status_code=403, detail="Invalid token")
 
+# Endpoint to create a new submission
 @app.post("/submissions", status_code=201)
 async def create_submission(
+    request: Request,  # Move request to the beginning as it doesn't have a default
     sub: SubmissionIn,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_auth),
-    request: Request  # Add request parameter to capture raw body
+    _: None = Depends(verify_auth)
 ):
-    # Log the raw body for debugging
+    # Capture raw request body and print for debugging
     raw_body = await request.body()
-    print("🔍 RAW REQUEST BODY:\n", raw_body.decode())  # This will print the incoming JSON to your terminal
-
-    # Process the data
+    print("RAW REQUEST BODY:\n", raw_body.decode())
+    
+    # Create a new submission object and save it to the database
     db_obj = models.Submission(**sub.dict())
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+    
+    # Assign verified role in Discord using the bot
     await discord_bot.assign_verified_role(sub.discord_id)
     
+    # Return the created submission ID and verified status
     return {"id": db_obj.id, "verified": True}
