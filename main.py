@@ -61,7 +61,7 @@ async def create_submission(
     db.refresh(db_obj)
     
     # Assign verified role in Discord using the bot
-    await discord_bot.assign_verified_role(sub.discord_id)
+    #await discord_bot.assign_verified_role(sub.discord_id)
     
     # Return the created submission ID and verified status
     return {"id": db_obj.id, "verified": True}
