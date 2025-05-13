@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, Depends, Request, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -44,11 +43,18 @@ def verify_auth(request: Request):
 async def create_submission(
     sub: SubmissionIn,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_auth)
+    _: None = Depends(verify_auth),
+    request: Request  # Add request parameter to capture raw body
 ):
+    # Log the raw body for debugging
+    raw_body = await request.body()
+    print("🔍 RAW REQUEST BODY:\n", raw_body.decode())  # This will print the incoming JSON to your terminal
+
+    # Process the data
     db_obj = models.Submission(**sub.dict())
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
     await discord_bot.assign_verified_role(sub.discord_id)
+    
     return {"id": db_obj.id, "verified": True}
